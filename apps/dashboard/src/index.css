@@ -1,0 +1,6 @@
+@import '@resolvedigital/ui/globals.css';
+
+/* Tailwind v4 replaces the `content` array with @source directives. The shared
+   UI package registers its own sources; this covers the app itself. */
+@source "./";
+@source "../index.html";

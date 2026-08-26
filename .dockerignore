@@ -1,0 +1,36 @@
+# Never ship the host's dependency tree or VCS history into the build context.
+node_modules
+**/node_modules
+.git
+.github
+.husky
+.turbo
+**/.turbo
+
+# Build outputs (rebuilt inside the image)
+dist
+**/dist
+.next
+**/.next
+build
+**/build
+out
+**/out
+coverage
+**/coverage
+**/*.tsbuildinfo
+packages/i18n/src/paraglide
+packages/i18n/types
+
+# Secrets and local-only files
+.env
+.env.*
+!.env.example
+.vscode
+.idea
+
+# Docs and editor noise
+*.md
+!README.md
+.DS_Store
+Thumbs.db

@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# A new push to the same ref cancels the previous run - except on the default
+# branches, where every commit's result is worth keeping.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Enough to satisfy env validation during lint/typecheck/build. No real
+  # database is contacted: the client only connects on first query.
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+  NEXT_PUBLIC_API_URL: http://localhost:3001/api
+  VITE_API_URL: http://localhost:3001/api
+
+jobs:
+  verify:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: 'pnpm'
+
+      # Restore always, save only on the default branch. Keying by SHA and
+      # saving on every run - the old setup - never produced an exact hit and
+      # wrote a fresh multi-hundred-MB entry per commit, evicting everything
+      # else in the 10 GB repository budget.
+      - name: Restore turbo cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .turbo
+            node_modules/.cache/turbo
+          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-turbo-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Security audit
+        run: pnpm audit --audit-level=high
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      # Run lint, root lint, and typecheck concurrently via turbo
+      - name: Lint & Typecheck
+        run: pnpm exec turbo run lint lint:root typecheck
+
+      # Coverage rather than a bare run, so the thresholds in each
+      # vitest.config are actually enforced.
+      - name: Test
+        run: pnpm test:coverage
+
+      - name: Save turbo cache
+        if: github.event_name == 'push'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .turbo
+            node_modules/.cache/turbo
+          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Only worth spending 25 minutes of builder time once the code is known
+    # good. The README said "then builds all three images"; without this the
+    # job simply raced the checks.
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: backend
+            artifact: dist/main.js
+          - app: landing
+            artifact: apps/landing/server.js
+          - app: dashboard
+            artifact: /usr/share/nginx/html/index.html
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.app }} image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          push: false
+          load: true
+          tags: resolvedigital-template/${{ matrix.app }}:ci
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+      # An image that builds but ships no entrypoint is not a passing build.
+      - name: Verify the image contains its entrypoint
+        run: >
+          docker run --rm --entrypoint sh resolvedigital-template/${{ matrix.app }}:ci
+          -c 'test -f "${{ matrix.artifact }}"'

@@ -1,0 +1,21 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "files.eol": "\n",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\(([^)]*)\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cx\(([^)]*)\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+  ],
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "search.exclude": {
+    "**/dist": true,
+    "**/.next": true,
+    "**/.turbo": true,
+    "packages/i18n/src/paraglide": true
+  }
+}
