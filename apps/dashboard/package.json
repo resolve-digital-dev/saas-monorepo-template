@@ -33,7 +33,7 @@
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^6.1.0",
     "@vitest/coverage-v8": "^4.1.11",
-    "eslint": "^9.39.5",
+    "eslint": "^10.9.0",
     "jsdom": "^30.0.1",
     "postcss": "^8.5.26",
     "rimraf": "^6.1.3",
