@@ -1,0 +1,56 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "NODE_ENV",
+    "CI",
+    "DATABASE_URL",
+    "DATABASE_POOL_MAX",
+    "DATABASE_SSL",
+    "PORT",
+    "LOG_LEVEL",
+    "CORS_ORIGINS",
+    "RATE_LIMIT_TTL",
+    "RATE_LIMIT_LIMIT",
+    "SWAGGER_ENABLED",
+    "SKIP_ENV_VALIDATION",
+    "API_URL",
+    "NEXT_PUBLIC_API_URL",
+    "NEXT_OUTPUT_STANDALONE",
+    "VITE_API_URL"
+  ],
+  "globalDependencies": [".env", ".env.local"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "!**/*.spec.ts", "!**/*.test.ts"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "build/**"]
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "eslint.config.mjs", "!**/*.md"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "tsconfig*.json", "!**/*.md"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "clean": {
+      "cache": false
+    },
+    "//#lint:root": {
+      "inputs": ["eslint.config.mjs", "commitlint.config.js", "scripts/**", "package.json"]
+    }
+  }
+}

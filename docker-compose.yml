@@ -1,0 +1,107 @@
+name: resolvedigital-template
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-resolvedigital}
+    ports:
+      # Bound to loopback so the database is not reachable from the network.
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-resolvedigital}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Runs the compiled drizzle migrator once and exits.
+  #
+  # Without this the stack came up against an empty database and every request
+  # that touched a table failed with `relation "users" does not exist`. It reuses
+  # the backend image (same `image:` tag, so it is built once) because
+  # `@resolvedigital/database` ships `dist/migrate.js` plus the SQL files inside
+  # the production closure - `tsx` is a devDependency and is not in the image.
+  migrate:
+    image: resolvedigital-template/backend:local
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: 'no'
+    command: ['node', 'node_modules/@resolvedigital/database/dist/migrate.js']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-resolvedigital}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    image: resolvedigital-template/backend:local
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    # PID 1 in the container is node; `init` gives it a real init process to
+    # reap orphans and forward signals.
+    init: true
+    ports:
+      - '3001:3001'
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-resolvedigital}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      RATE_LIMIT_TTL: ${RATE_LIMIT_TTL:-60}
+      RATE_LIMIT_LIMIT: ${RATE_LIMIT_LIMIT:-120}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  landing:
+    build:
+      context: .
+      dockerfile: apps/landing/Dockerfile
+      args:
+        # Browser-facing, inlined into the bundle at build time.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+    restart: unless-stopped
+    init: true
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      # Server-side, read at runtime: `localhost` inside this container is this
+      # container, so server components have to address the backend by service
+      # name. This is why API_URL exists separately from NEXT_PUBLIC_API_URL.
+      API_URL: ${API_URL:-http://backend:3001/api}
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/api}
+    restart: unless-stopped
+    ports:
+      - '5173:8080'
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  db-data:

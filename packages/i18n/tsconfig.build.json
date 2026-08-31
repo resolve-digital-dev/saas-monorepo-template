@@ -1,0 +1,18 @@
+{
+  "extends": "../typescript-config/base.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "declaration": true,
+    "declarationMap": false,
+    "emitDeclarationOnly": true,
+    "isolatedModules": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "outDir": "./types",
+    "rootDir": "./src",
+    "skipLibCheck": true
+  },
+  "include": ["src/paraglide/**/*.js"],
+  "exclude": ["node_modules", "types"]
+}

@@ -1,0 +1,56 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Security overrides.
+#
+# pnpm 10+ no longer reads the `pnpm.overrides` field from package.json - it
+# belongs here. Leaving it in the old place silently dropped both patches below.
+overrides:
+  # GHSA-q8mj-m7cp-5q26 - qs.stringify DoS, reaches production through express 5.
+  qs: '^6.15.3'
+  # GHSA-67mh-4wv8-2f99 - esbuild dev-server SSRF. drizzle-kit still depends on
+  # the deprecated @esbuild-kit/* packages, which pin esbuild 0.18 and cannot be
+  # bumped in place. Their authors merged them into tsx, the documented
+  # replacement, so they are aliased to it here.
+  '@esbuild-kit/core-utils': 'npm:tsx@^4.23.12'
+  '@esbuild-kit/esm-loader': 'npm:tsx@^4.23.12'
+  esbuild: '^0.25.0'
+
+# pnpm refuses to run dependency install scripts unless they are allowed here.
+# The two `true` entries unpack prebuilt native binaries and genuinely need it.
+# Everything else stays blocked, including @nestjs/core's opencollective ad.
+#
+# `false` is an explicit, recorded refusal rather than an omission - without it
+# `pnpm install` exits 1 with ERR_PNPM_IGNORED_BUILDS every time it meets the
+# package, which would fail CI. @scarf/scarf is an install-time analytics
+# beacon that arrives with the Nest packages.
+allowBuilds:
+  '@scarf/scarf': false
+  '@swc/core': false
+  esbuild: true
+  unrs-resolver: true
+
+# Refuse any version published less than 24h ago - a cheap defence against a
+# compromised release being pulled in minutes after it lands. Set explicitly
+# rather than relying on the client default, so the policy survives a pnpm
+# upgrade and is visible to anyone reading this file.
+#
+# The policy is checked against the whole lockfile on every install, not only
+# at resolution time, so anything genuinely needed inside the window has to be
+# listed below.
+minimumReleaseAge: 1440
+
+# Allow-list for the window above. Entries are package NAMES and scope globs,
+# never `name@version`: a version-pinned list silently re-arms the block on the
+# next patch bump and breaks Dependabot PRs on the day they open.
+#
+# Everything here is first-party tooling published by the framework vendors
+# themselves, pinned by this repo and verified before bumping. Prune an entry
+# the moment the repo stops depending on it.
+minimumReleaseAgeExclude:
+  - 'next'
+  - '@next/*'
+  - 'eslint-config-next'
+  - 'turbo'
+  - '@turbo/*'

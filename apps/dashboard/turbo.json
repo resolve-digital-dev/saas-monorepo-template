@@ -1,0 +1,14 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      // `vite build` does not typecheck. Rather than running `tsc --noEmit &&
+      // vite build` - which made CI typecheck the dashboard twice - the build
+      // depends on the cached `typecheck` task.
+      "dependsOn": ["^build", "typecheck"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "!**/*.spec.ts", "!**/*.spec.tsx"],
+      "outputs": ["dist/**"]
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
+      "outputs": ["src/paraglide/**", "types/**"]
+    },
+    "lint": {
+      "dependsOn": ["^build", "build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build", "build"]
+    }
+  }
+}
