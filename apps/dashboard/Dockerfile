@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:22-alpine AS base
+FROM node:26-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -26,7 +26,7 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN pnpm turbo run build --filter=@resolvedigital/dashboard
 
 # Unprivileged nginx image: listens on 8080 and runs as uid 101 by default.
-FROM nginxinc/nginx-unprivileged:1.27-alpine AS runner
+FROM nginxinc/nginx-unprivileged:1.31-alpine AS runner
 COPY --from=installer /app/apps/dashboard/dist /usr/share/nginx/html
 # Both files land in conf.d: nginx auto-includes *.conf, and default.conf pulls
 # in the .inc (which is deliberately not a .conf so it is not auto-included).
