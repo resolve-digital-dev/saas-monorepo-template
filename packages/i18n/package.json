@@ -23,7 +23,7 @@
     "@inlang/paraglide-js": "^2.24.1"
   },
   "devDependencies": {
-    "@inlang/plugin-message-format": "^4.4.3",
+    "@inlang/plugin-message-format": "^4.5.1",
     "@resolvedigital/eslint-config": "workspace:*",
     "@resolvedigital/typescript-config": "workspace:*",
     "eslint": "^9.39.5",
