@@ -23,11 +23,11 @@
     "@inlang/paraglide-js": "^2.24.1"
   },
   "devDependencies": {
-    "@inlang/plugin-message-format": "^4.4.3",
+    "@inlang/plugin-message-format": "^4.6.0",
     "@resolvedigital/eslint-config": "workspace:*",
     "@resolvedigital/typescript-config": "workspace:*",
     "eslint": "^9.39.5",
-    "rimraf": "^6.1.3",
+    "rimraf": "^6.1.4",
     "typescript": "^6.0.3"
   }
 }
